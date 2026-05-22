@@ -1,0 +1,146 @@
+from app.database import SessionLocal
+from app.models import Load
+
+db = SessionLocal()
+
+sample_loads = [
+    Load(
+        load_id="LOAD001",
+        origin="Dallas, TX",
+        destination="Houston, TX",
+        pickup_datetime="2026-05-22 08:00",
+        delivery_datetime="2026-05-22 16:00",
+        equipment_type="Dry Van",
+        loadboard_rate=2200,
+        min_acceptable_rate=2000,
+        target_rate=2150,
+        max_rate=2300,
+        notes="Food products",
+        weight=42000,
+        commodity_type="Groceries",
+        num_of_pieces=24,
+        miles=240,
+        dimensions="48x40 pallets",
+    ),
+
+    Load(
+        load_id="LOAD002",
+        origin="Chicago, IL",
+        destination="Atlanta, GA",
+        pickup_datetime="2026-05-23 09:00",
+        delivery_datetime="2026-05-24 18:00",
+        equipment_type="Reefer",
+        loadboard_rate=3400,
+        min_acceptable_rate=3200,
+        target_rate=3350,
+        max_rate=3600,
+        notes="Frozen goods",
+        weight=38000,
+        commodity_type="Frozen Foods",
+        num_of_pieces=18,
+        miles=720,
+        dimensions="Temperature controlled",
+    ),
+Load(
+    load_id="LOAD003",
+    origin="Los Angeles, CA",
+    destination="Phoenix, AZ",
+    pickup_datetime="2026-05-24 06:00",
+    delivery_datetime="2026-05-24 18:00",
+    equipment_type="Flatbed",
+    loadboard_rate=2800,
+    min_acceptable_rate=2550,
+    target_rate=2700,
+    max_rate=2900,
+    notes="Construction steel beams",
+    weight=46000,
+    commodity_type="Steel",
+    num_of_pieces=12,
+    miles=370,
+    dimensions="Oversized flatbed load",
+),
+
+Load(
+    load_id="LOAD004",
+    origin="Miami, FL",
+    destination="Orlando, FL",
+    pickup_datetime="2026-05-24 08:00",
+    delivery_datetime="2026-05-24 14:00",
+    equipment_type="Dry Van",
+    loadboard_rate=1200,
+    min_acceptable_rate=1050,
+    target_rate=1150,
+    max_rate=1300,
+    notes="Retail merchandise",
+    weight=18000,
+    commodity_type="Consumer Goods",
+    num_of_pieces=10,
+    miles=240,
+    dimensions="Standard pallets",
+),
+
+Load(
+    load_id="LOAD005",
+    origin="Seattle, WA",
+    destination="Denver, CO",
+    pickup_datetime="2026-05-25 05:00",
+    delivery_datetime="2026-05-26 20:00",
+    equipment_type="Reefer",
+    loadboard_rate=5200,
+    min_acceptable_rate=4900,
+    target_rate=5100,
+    max_rate=5400,
+    notes="Frozen seafood shipment",
+    weight=39000,
+    commodity_type="Frozen Seafood",
+    num_of_pieces=20,
+    miles=1330,
+    dimensions="Temperature controlled",
+),
+
+Load(
+    load_id="LOAD006",
+    origin="Nashville, TN",
+    destination="Memphis, TN",
+    pickup_datetime="2026-05-24 10:00",
+    delivery_datetime="2026-05-24 18:00",
+    equipment_type="Box Truck",
+    loadboard_rate=950,
+    min_acceptable_rate=850,
+    target_rate=900,
+    max_rate=1000,
+    notes="Local furniture delivery",
+    weight=9000,
+    commodity_type="Furniture",
+    num_of_pieces=30,
+    miles=210,
+    dimensions="Residential delivery",
+),
+
+Load(
+    load_id="LOAD007",
+    origin="Newark, NJ",
+    destination="Boston, MA",
+    pickup_datetime="2026-05-25 07:00",
+    delivery_datetime="2026-05-25 17:00",
+    equipment_type="Dry Van",
+    loadboard_rate=2600,
+    min_acceptable_rate=2400,
+    target_rate=2550,
+    max_rate=2750,
+    notes="Urgent pharmaceutical shipment",
+    weight=25000,
+    commodity_type="Pharmaceuticals",
+    num_of_pieces=14,
+    miles=230,
+    dimensions="High priority delivery",
+)
+
+]
+
+for load in sample_loads:
+    db.add(load)
+
+db.commit()
+
+print("Sample loads inserted successfully!")
