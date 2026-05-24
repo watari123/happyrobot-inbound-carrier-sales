@@ -1,8 +1,6 @@
 from app.database import SessionLocal
 from app.models import Load
 
-db = SessionLocal()
-
 sample_loads = [
     Load(
         load_id="LOAD001",
@@ -138,9 +136,25 @@ Load(
 
 ]
 
-for load in sample_loads:
-    db.add(load)
+def seed_loads_if_empty():
+    db = SessionLocal()
 
-db.commit()
+    try:
+        existing_loads = db.query(Load).count()
 
-print("Sample loads inserted successfully!")
+        if existing_loads > 0:
+            print("Loads already exist. Skipping seed.")
+            return
+
+        for load in sample_loads:
+            db.add(load)
+
+        db.commit()
+        print("Sample loads inserted successfully!")
+
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    seed_loads_if_empty()

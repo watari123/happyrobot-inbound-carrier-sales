@@ -8,8 +8,10 @@ from app.database import engine, SessionLocal
 from app.models import Base, Load, CallLog
 from pydantic import BaseModel
 from typing import Optional
+from app.seed_loads import seed_loads_if_empty
 
 Base.metadata.create_all(bind=engine)
+seed_loads_if_empty()
 
 app = FastAPI(
     title="Inbound Carrier Sales API",
