@@ -1,6 +1,8 @@
+import os
+from fastapi import FastAPI, Depends, Header, HTTPException
+
 from app.services.negotiation import negotiate_rate
 from app.services.fmcsa import verify_carrier_by_mc
-from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from app.database import engine, SessionLocal
 from app.models import Base, Load, CallLog
@@ -14,6 +16,14 @@ app = FastAPI(
     description="Backend API for HappyRobot inbound carrier sales automation.",
     version="0.1.0"
 )
+
+API_KEY = os.getenv("API_KEY", "dev-api-key")
+
+def verify_api_key(x_api_key: str = Header(None)):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    return True
+
 
 # -----------------------------
 # DATABASE SESSION
@@ -66,7 +76,7 @@ class NegotiationRequest(BaseModel):
 # -----------------------------
 
 @app.get("/loads")
-def get_loads(db: Session = Depends(get_db)):
+def get_loads(db: Session = Depends(get_db), authorized: bool = Depends(verify_api_key)):
     loads = db.query(Load).all()
 
     return loads
@@ -78,7 +88,7 @@ def get_loads(db: Session = Depends(get_db)):
 @app.post("/loads/search")
 def search_loads(
     request: LoadSearchRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), authorized: bool = Depends(verify_api_key)
 ):
 
     query = db.query(Load)
@@ -106,7 +116,7 @@ def search_loads(
     }
 
 @app.post("/carrier/verify")
-def verify_carrier(request: CarrierVerifyRequest):
+def verify_carrier(request: CarrierVerifyRequest, authorized: bool = Depends(verify_api_key)):
     result = verify_carrier_by_mc(request.mc_number)
 
     return result
@@ -114,7 +124,7 @@ def verify_carrier(request: CarrierVerifyRequest):
 @app.post("/negotiate")
 def negotiate(
     request: NegotiationRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), authorized: bool = Depends(verify_api_key)
 ):
 
     load = db.query(Load).filter(
@@ -152,7 +162,7 @@ class CallLogRequest(BaseModel):
 @app.post("/calls/log")
 def log_call(
     request: CallLogRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), authorized: bool = Depends(verify_api_key)
 ):
 
     log = CallLog(
@@ -172,7 +182,7 @@ def log_call(
     }
 
 @app.get("/metrics")
-def get_metrics(db: Session = Depends(get_db)):
+def get_metrics(db: Session = Depends(get_db), authorized: bool = Depends(verify_api_key)):
 
     total_calls = db.query(CallLog).count()
 
