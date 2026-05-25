@@ -1,6 +1,8 @@
 import os
 from fastapi import FastAPI, Depends, Header, HTTPException
 
+from fastapi.staticfiles import StaticFiles
+
 from app.services.negotiation import negotiate_rate
 from app.services.fmcsa import verify_carrier_by_mc
 from sqlalchemy.orm import Session
@@ -28,6 +30,8 @@ app = FastAPI(
     description="Backend API for HappyRobot inbound carrier sales automation.",
     version="0.1.0"
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 from fastapi.middleware.cors import CORSMiddleware
 

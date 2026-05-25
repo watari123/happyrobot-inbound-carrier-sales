@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HappyRobot — Carrier Sales Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f4f5f7;
+      color: #1a1a2e;
+      min-height: 100vh;
+      padding: 32px 24px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .logo { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+    .logo span { color: #6c6cff; }
+    .last-updated { font-size: 13px; color: #888; }
+    .refresh-btn {
+      background: #fff;
+      border: 1px solid #e0e0e8;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 13px;
+      color: #555;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .refresh-btn:hover { background: #f0f0f8; }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .metric-card {
+      background: #fff;
+      border: 1px solid #e8e8f0;
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+    .metric-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .metric-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1a1a2e;
+      line-height: 1;
+    }
+    .metric-value.green { color: #16a34a; }
+    .metric-value.purple { color: #6c6cff; }
+    .metric-value.amber { color: #d97706; }
+    .metric-sub {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 6px;
+    }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .chart-card {
+      background: #fff;
+      border: 1px solid #e8e8f0;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 20px;
+    }
+
+    .table-card {
+      background: #fff;
+      border: 1px solid #e8e8f0;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 0 12px 12px 0;
+      border-bottom: 1px solid #f0f0f8;
+    }
+    td {
+      padding: 12px 12px 12px 0;
+      border-bottom: 1px solid #f8f8fc;
+      color: #333;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-success    { background: #dcfce7; color: #15803d; }
+    .badge-no-loads   { background: #fef3c7; color: #b45309; }
+    .badge-declined   { background: #fee2e2; color: #b91c1c; }
+    .badge-ineligible { background: #fce7f3; color: #9d174d; }
+    .badge-neg-failed { background: #ede9fe; color: #6d28d9; }
+    .badge-unknown    { background: #f1f5f9; color: #64748b; }
+
+    .sentiment-positive { color: #16a34a; font-weight: 600; }
+    .sentiment-ok       { color: #d97706; font-weight: 600; }
+    .sentiment-negative { color: #dc2626; font-weight: 600; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #aaa;
+      font-size: 14px;
+    }
+    .error-banner {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #b91c1c;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f8 25%, #e8e8f4 50%, #f0f0f8 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+      border-radius: 6px;
+      height: 32px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+      font-size: 12px;
+      color: #555;
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<div class="error-banner" id="errorBanner"></div>
+
+<div class="header">
+  <div class="logo">Happy<span>Robot</span> <span style="font-weight:400;color:#888;font-size:15px;">/ Carrier Sales</span></div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="last-updated" id="lastUpdated"></span>
+    <button class="refresh-btn" onclick="init()">&#8635; Refresh</button>
+  </div>
+</div>
+
+<div class="metric-grid">
+  <div class="metric-card">
+    <div class="metric-label">Total calls</div>
+    <div class="metric-value" id="mTotalCalls"><div class="skeleton"></div></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Success rate</div>
+    <div class="metric-value green" id="mSuccessRate"><div class="skeleton"></div></div>
+    <div class="metric-sub" id="mSuccessSub"></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Avg negotiated rate</div>
+    <div class="metric-value purple" id="mAvgRate"><div class="skeleton"></div></div>
+    <div class="metric-sub">Successful bookings only</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Avg negotiation rounds</div>
+    <div class="metric-value amber" id="mAvgRounds"><div class="skeleton"></div></div>
+    <div class="metric-sub">Across all calls</div>
+  </div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card">
+    <div class="card-title">Call outcomes</div>
+    <div style="position:relative;height:220px;">
+      <canvas id="outcomesChart" role="img" aria-label="Bar chart of call outcomes by type">Call outcome distribution.</canvas>
+    </div>
+    <div class="legend" id="outcomesLegend"></div>
+  </div>
+  <div class="chart-card">
+    <div class="card-title">Carrier sentiment</div>
+    <div style="position:relative;height:220px;">
+      <canvas id="sentimentChart" role="img" aria-label="Donut chart of carrier sentiment distribution">Sentiment breakdown: positive, ok, negative.</canvas>
+    </div>
+    <div class="legend" id="sentimentLegend"></div>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="card-title" style="margin-bottom:16px;">Recent calls</div>
+  <table>
+    <thead>
+      <tr>
+        <th>MC #</th>
+        <th>Load ID</th>
+        <th>Outcome</th>
+        <th>Rate</th>
+        <th>Sentiment</th>
+        <th>Rounds</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="callsTableBody">
+      <tr><td colspan="7"><div class="empty-state">Loading…</div></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  const BASE_URL = 'https://happyrobot-inbound-carrier-sales-production.up.railway.app';
+  const API_KEY  = 'hr_9f3kL2pQ8xA7mZ';
+
+  const OUTCOME_COLORS = {
+    SUCCESS:              '#22c55e',
+    NO_LOADS:             '#f59e0b',
+    CARRIER_DECLINED:     '#f97316',
+    CARRIER_NOT_ELIGIBLE: '#ef4444',
+    NEGOTIATION_FAILED:   '#8b5cf6',
+  };
+  const SENTIMENT_COLORS = {
+    POSITIVE: '#22c55e',
+    OK:       '#6b7280',
+    NEGATIVE: '#ef4444',
+  };
+
+  let outcomesChartInst = null;
+  let sentimentChartInst = null;
+
+  async function apiFetch(path) {
+    const res = await fetch(BASE_URL + path, {
+      headers: { 'x-api-key': API_KEY }
+    });
+    if (!res.ok) throw new Error(`${path} → HTTP ${res.status}`);
+    return res.json();
+  }
+
+  function outcomeBadge(outcome) {
+    const map = {
+      SUCCESS:              'badge-success',
+      NO_LOADS:             'badge-no-loads',
+      CARRIER_DECLINED:     'badge-declined',
+      CARRIER_NOT_ELIGIBLE: 'badge-ineligible',
+      NEGOTIATION_FAILED:   'badge-neg-failed',
+    };
+    const cls = map[outcome] || 'badge-unknown';
+    const label = (outcome || 'UNKNOWN').replace(/_/g, ' ');
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
+  function sentimentLabel(s) {
+    const map = {
+      POSITIVE: 'sentiment-positive',
+      OK:       'sentiment-ok',
+      NEGATIVE: 'sentiment-negative',
+    };
+    return `<span class="${map[s] || ''}">${s || '—'}</span>`;
+  }
+
+  function formatTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+           ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderMetrics(m) {
+    document.getElementById('mTotalCalls').textContent  = m.total_calls;
+    document.getElementById('mSuccessRate').textContent = m.success_rate + '%';
+    document.getElementById('mSuccessSub').textContent  =
+      `${m.successful_calls} booked / ${m.failed_calls} not booked`;
+    document.getElementById('mAvgRate').textContent     =
+      m.avg_negotiated_rate ? '$' + m.avg_negotiated_rate.toLocaleString() : '—';
+    document.getElementById('mAvgRounds').textContent   = m.avg_negotiation_rounds || '—';
+  }
+
+  function renderOutcomesChart(breakdown) {
+    const labels = Object.keys(breakdown);
+    const data   = Object.values(breakdown);
+    const colors = labels.map(l => OUTCOME_COLORS[l] || '#cbd5e1');
+
+    if (outcomesChartInst) outcomesChartInst.destroy();
+    outcomesChartInst = new Chart(document.getElementById('outcomesChart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: colors,
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} calls` } }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              font: { size: 11 },
+              callback: (_, i) => labels[i].replace(/_/g, ' '),
+              autoSkip: false,
+              maxRotation: 30,
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#f0f0f8' },
+            ticks: { stepSize: 1, font: { size: 11 } }
+          }
+        }
+      }
+    });
+
+    const legendEl = document.getElementById('outcomesLegend');
+    legendEl.innerHTML = labels.map((l, i) =>
+      `<span class="legend-item"><span class="legend-dot" style="background:${colors[i]}"></span>${l.replace(/_/g,' ')} (${data[i]})</span>`
+    ).join('');
+  }
+
+  function renderSentimentChart(distribution) {
+    const labels = Object.keys(distribution);
+    const data   = Object.values(distribution);
+    const colors = labels.map(l => SENTIMENT_COLORS[l] || '#cbd5e1');
+    const total  = data.reduce((a, b) => a + b, 0);
+
+    if (sentimentChartInst) sentimentChartInst.destroy();
+    sentimentChartInst = new Chart(document.getElementById('sentimentChart'), {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: colors,
+          borderWidth: 2,
+          borderColor: '#fff',
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.parsed} calls (${total ? Math.round(ctx.parsed / total * 100) : 0}%)`
+            }
+          }
+        }
+      }
+    });
+
+    const legendEl = document.getElementById('sentimentLegend');
+    legendEl.innerHTML = labels.map((l, i) =>
+      `<span class="legend-item"><span class="legend-dot" style="background:${colors[i]}"></span>${l} (${data[i]})</span>`
+    ).join('');
+  }
+
+  function renderCallsTable(calls) {
+    const tbody = document.getElementById('callsTableBody');
+    if (!calls || calls.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">No calls logged yet.</div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = calls.map(c => `
+      <tr>
+        <td><code style="font-size:12px;background:#f8f8fc;padding:2px 6px;border-radius:4px;">${c.carrier_mc || '—'}</code></td>
+        <td style="color:#888;font-size:12px;">${c.load_id || '—'}</td>
+        <td>${outcomeBadge(c.outcome)}</td>
+        <td>${c.negotiated_rate ? '$' + Number(c.negotiated_rate).toLocaleString() : '—'}</td>
+        <td>${sentimentLabel(c.sentiment)}</td>
+        <td style="text-align:center;">${c.negotiation_rounds ?? '—'}</td>
+        <td style="color:#aaa;font-size:12px;">${formatTime(c.created_at)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorBanner');
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
+  }
+
+  function safeRenderOutcomesChart(breakdown) {
+    const canvas = document.getElementById('outcomesChart');
+    if (!canvas) return;
+    if (!breakdown || Object.keys(breakdown).length === 0) {
+      canvas.parentElement.innerHTML = '<div class="empty-state">No outcome data yet.</div>';
+      return;
+    }
+    renderOutcomesChart(breakdown);
+  }
+
+  function safeRenderSentimentChart(distribution) {
+    const canvas = document.getElementById('sentimentChart');
+    if (!canvas) return;
+    if (!distribution || Object.keys(distribution).length === 0) {
+      canvas.parentElement.innerHTML = '<div class="empty-state">No sentiment data yet.</div>';
+      return;
+    }
+    renderSentimentChart(distribution);
+  }
+
+  async function init() {
+    document.getElementById('errorBanner').style.display = 'none';
+    document.getElementById('lastUpdated').textContent = '';
+
+    // Metrics + charts
+    try {
+      const metrics = await apiFetch('/metrics');
+      renderMetrics(metrics);
+      safeRenderOutcomesChart(metrics.outcomes_breakdown);
+      safeRenderSentimentChart(metrics.sentiment_distribution);
+    } catch (err) {
+      showError('Could not load metrics — ' + err.message);
+    }
+
+    // Recent calls (independent — won't break charts if it fails)
+    try {
+      const callsData = await apiFetch('/calls?limit=50');
+      renderCallsTable(callsData.calls);
+    } catch (err) {
+      document.getElementById('callsTableBody').innerHTML =
+        `<tr><td colspan="7"><div class="empty-state">Could not load calls — ${err.message}</div></td></tr>`;
+    }
+
+    document.getElementById('lastUpdated').textContent =
+      'Updated ' + new Date().toLocaleTimeString();
+  }
+
+  init();
+</script>
+</body>
+</html>
