@@ -29,6 +29,15 @@ app = FastAPI(
     version="0.1.0"
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 API_KEY = os.getenv("API_KEY", "dev-api-key")
 
 def verify_api_key(x_api_key: str = Header(None)):
