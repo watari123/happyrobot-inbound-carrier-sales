@@ -260,6 +260,9 @@ http://127.0.0.1:8000/docs
 <img width="2160" height="1494" alt="image" src="https://github.com/user-attachments/assets/bcafdc83-b205-42c8-aabb-4b5c27d7e232" />
 
 ## Metrics Dashboard
+https://happyrobot-inbound-carrier-sales-production.up.railway.app/static/dashboard.html
+<img width="2918" height="1656" alt="image" src="https://github.com/user-attachments/assets/79071d6c-a290-4fa2-b57d-f4d002e22a7f" />
+
 
 # Author
 
