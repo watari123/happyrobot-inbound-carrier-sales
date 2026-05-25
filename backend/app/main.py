@@ -4,6 +4,7 @@ from fastapi import FastAPI, Depends, Header, HTTPException
 from app.services.negotiation import negotiate_rate
 from app.services.fmcsa import verify_carrier_by_mc
 from sqlalchemy.orm import Session
+from sqlalchemy import func, text
 from app.database import engine, SessionLocal
 from app.models import Base, Load, CallLog
 from pydantic import BaseModel
@@ -11,6 +12,15 @@ from typing import Optional
 from app.seed_loads import seed_loads_if_empty
 
 Base.metadata.create_all(bind=engine)
+
+# Migrate existing tables — add new columns if they don't exist yet
+with engine.connect() as conn:
+    try:
+        conn.execute(text("ALTER TABLE call_logs ADD COLUMN created_at DATETIME"))
+        conn.commit()
+    except Exception:
+        pass  # Column already exists, skip
+
 seed_loads_if_empty()
 
 app = FastAPI(
@@ -183,21 +193,85 @@ def log_call(
         "message": "Call logged successfully"
     }
 
+# -------------------------
+# GET RECENT CALLS
+# -------------------------
+
+@app.get("/calls")
+def get_calls(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    authorized: bool = Depends(verify_api_key)
+):
+    calls = db.query(CallLog).order_by(CallLog.id.desc()).limit(limit).all()
+    return {
+        "count": len(calls),
+        "calls": [
+            {
+                "id": c.id,
+                "carrier_mc": c.carrier_mc,
+                "load_id": c.load_id,
+                "outcome": c.outcome,
+                "negotiated_rate": c.negotiated_rate,
+                "sentiment": c.sentiment,
+                "negotiation_rounds": c.negotiation_rounds,
+            }
+            for c in calls
+        ]
+    }
+
+# -------------------------
+# METRICS
+# -------------------------
+
 @app.get("/metrics")
 def get_metrics(db: Session = Depends(get_db), authorized: bool = Depends(verify_api_key)):
 
     total_calls = db.query(CallLog).count()
 
     successful_calls = db.query(CallLog).filter(
-        CallLog.outcome == "BOOKED"
+        CallLog.outcome == "SUCCESS"
     ).count()
 
     failed_calls = db.query(CallLog).filter(
-        CallLog.outcome == "FAILED"
+        CallLog.outcome != "SUCCESS"
     ).count()
+
+    success_rate = round(successful_calls / total_calls * 100, 1) if total_calls > 0 else 0
+
+    # Breakdown by outcome
+    outcome_rows = (
+        db.query(CallLog.outcome, func.count(CallLog.outcome))
+        .group_by(CallLog.outcome)
+        .all()
+    )
+    outcomes_breakdown = {outcome: count for outcome, count in outcome_rows}
+
+    # Sentiment distribution
+    sentiment_rows = (
+        db.query(CallLog.sentiment, func.count(CallLog.sentiment))
+        .group_by(CallLog.sentiment)
+        .all()
+    )
+    sentiment_distribution = {sentiment: count for sentiment, count in sentiment_rows}
+
+    # Average negotiated rate (successful calls only)
+    avg_rate = db.query(func.avg(CallLog.negotiated_rate)).filter(
+        CallLog.outcome == "SUCCESS"
+    ).scalar()
+    avg_negotiated_rate = round(float(avg_rate), 2) if avg_rate else 0
+
+    # Average negotiation rounds (all calls)
+    avg_rounds = db.query(func.avg(CallLog.negotiation_rounds)).scalar()
+    avg_negotiation_rounds = round(float(avg_rounds), 1) if avg_rounds else 0
 
     return {
         "total_calls": total_calls,
         "successful_calls": successful_calls,
-        "failed_calls": failed_calls
+        "failed_calls": failed_calls,
+        "success_rate": success_rate,
+        "avg_negotiated_rate": avg_negotiated_rate,
+        "avg_negotiation_rounds": avg_negotiation_rounds,
+        "outcomes_breakdown": outcomes_breakdown,
+        "sentiment_distribution": sentiment_distribution,
     }

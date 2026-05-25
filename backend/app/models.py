@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, DateTime
+from datetime import datetime, timezone
+
 from app.database import Base
 
 class Load(Base):
@@ -52,3 +54,5 @@ class CallLog(Base):
     sentiment = Column(String)
 
     negotiation_rounds = Column(Integer)
+    
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
